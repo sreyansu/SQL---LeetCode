@@ -1,0 +1,33 @@
+WITH seasons AS(
+    SELECT
+        *,
+        CASE 
+            WHEN EXTRACT(MONTH FROM sale_date) IN (12, 1, 2) THEN 'Winter'
+            WHEN EXTRACT(MONTH FROM sale_date) IN (3, 4, 5) THEN 'Spring'
+            WHEN EXTRACT(MONTH FROM sale_date) IN (6, 7, 8) THEN 'Summer'
+            WHEN EXTRACT(MONTH FROM sale_date) IN (9, 10, 11) THEN 'Fall'
+        END AS season
+    FROM sales
+),
+category_totals AS (
+    SELECT
+        seasons.season,
+        products.category,
+        SUM(quantity) AS total_quantity,
+        SUM(quantity * price) AS total_revenue
+    FROM seasons
+    INNER JOIN products ON products.product_id = seasons.product_id
+    GROUP BY
+        seasons.season, products.category
+),
+ranked_categories AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY season ORDER BY total_quantity DESC, total_revenue DESC, category ASC
+        ) AS rn
+    FROM category_totals
+)
+
+SELECT season, category, total_quantity, total_revenue
+FROM ranked_categories 
+WHERE rn = 1
