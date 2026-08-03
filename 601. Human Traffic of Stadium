@@ -1,0 +1,19 @@
+WITH filter AS(
+    SELECT 
+        *,
+        id - ROW_NUMBER() OVER (ORDER BY id) AS group_ht
+    FROM Stadium
+    WHERE people >= 100
+)
+SELECT 
+    id,
+    visit_date,
+    people
+FROM filter
+WHERE group_ht IN(
+    SELECT group_ht
+    FROM filter
+    GROUP BY group_ht
+    HAVING COUNT(*) >= 3
+)
+ORDER BY visit_date
