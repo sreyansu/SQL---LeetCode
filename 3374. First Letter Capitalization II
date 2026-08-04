@@ -1,0 +1,47 @@
+--13/14 Test Cases passed
+
+
+WITH RECURSIVE temp AS(
+    SELECT 
+    content_id, content_text, length(content_text) AS "length"
+    FROM user_content
+),
+temp2 AS(
+    SELECT 
+    content_id, 
+    1 AS id, 
+    SUBSTRING(content_text,1,1) AS text,
+    content_text, length 
+    FROM temp
+UNION ALL
+    SELECT 
+    content_id, 
+    id+1, 
+    SUBSTRING(content_text,id+1,1) AS text,
+    content_text, length 
+    FROM temp2
+    WHERE id<=length-1
+),
+temp3 AS(
+    SELECT content_id,
+    id,
+    content_text,
+    length,text,
+    LAG(text,1,'') OVER (PARTITION BY content_id ORDER BY id) AS prev 
+    FROM temp2
+),
+temp4 AS(
+    SELECT content_id,id,content_text,length,prev,
+    (CASE 
+    WHEN prev = " " OR (prev = "-" AND text BETWEEN "a" AND "z")THEN upper(text)
+    WHEN prev BETWEEN "A" AND "z" AND text BETWEEN "A" AND "Z" THEN LOWER(text)
+    ELSE text
+    END
+    ) AS next
+    FROM temp3
+)
+SELECT content_id, content_text AS "original_text",
+GROUP_CONCAT(next ORDER BY id SEPARATOR '') AS converted_text FROM temp4
+GROUP BY content_id
+
+
