@@ -1,0 +1,45 @@
+WITH expensive AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY store_id
+            ORDER BY price DESC
+        ) AS rn
+    FROM inventory
+),
+cheapest AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY store_id
+            ORDER BY price
+        ) AS rn
+    FROM inventory
+),
+product_count AS (
+    SELECT
+        store_id,
+        COUNT(*) AS cnt
+    FROM inventory
+    GROUP BY store_id
+)
+
+SELECT
+    s.store_id,
+    s.store_name,
+    s.location,
+    e.product_name AS most_exp_product,
+    c.product_name AS cheapest_product,
+    ROUND(c.quantity / e.quantity, 2) AS imbalance_ratio
+FROM stores s
+JOIN expensive e
+    ON s.store_id = e.store_id
+JOIN cheapest c
+    ON s.store_id = c.store_id
+JOIN product_count p
+    ON s.store_id = p.store_id
+WHERE e.rn = 1
+  AND c.rn = 1
+  AND p.cnt >= 3
+  AND e.quantity < c.quantity
+ORDER BY imbalance_ratio DESC,s.store_name;
