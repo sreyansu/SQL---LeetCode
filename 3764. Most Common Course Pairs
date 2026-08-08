@@ -1,0 +1,39 @@
+WITH TopStudents AS (
+    SELECT user_id
+    FROM course_completions
+    GROUP BY user_id
+    HAVING COUNT(*) >= 5 AND AVG(course_rating) >=4
+),
+Allpairs AS(
+    SELECT 
+        c1.user_id,
+        c1.course_name AS course_a,
+        c2.course_name AS course_b,
+        c2.completion_date AS date_b
+    FROM course_completions c1
+    INNER JOIN course_completions c2 
+    ON c1.user_id = c2.user_id
+    WHERE c1.user_id IN (
+        SELECT user_id 
+        FROM TopStudents
+        )
+    AND c2.completion_date > c1.completion_date
+),
+ConsecutivePairs AS(
+SELECT *
+FROM Allpairs A1 
+WHERE date_b =(
+		SELECT	
+			MIN(date_b) 
+		FROM Allpairs 
+        WHERE A1.user_id = user_id
+        AND A1.course_a = course_a
+	)
+)
+SELECT course_a AS first_course,
+        course_b AS second_course,
+        COUNT(course_a) AS transition_count
+    FROM ConsecutivePairs
+    GROUP BY course_a,course_b
+    ORDER BY transition_count DESC, LOWER(first_course),LOWER(second_course)
+
